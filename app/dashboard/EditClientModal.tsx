@@ -10,7 +10,7 @@ type Client = {
   phone: string;
   platformUrl: string;
   pricePaid: number;
-  featuresModificationsPrice?: number;
+  featuresModificationsPrice?: number | null;
 };
 
 export default function EditClientModal({
