@@ -109,7 +109,7 @@ export default async function DashboardPage() {
     collaborationsSum;
 
   const pendingUsers = await prisma.user.findMany({
-    where: { role: { in: [Role.VIEWER, Role.USER] } },
+    where: { role: Role.USER },
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
@@ -181,7 +181,7 @@ export default async function DashboardPage() {
               <p className="mt-2 text-3xl font-bold tabular-nums text-white">
                 {pendingUsers.length.toLocaleString("ar-EG")}
               </p>
-              <p className="mt-0.5 text-xs text-zinc-500">حساب متفرج</p>
+              <p className="mt-0.5 text-xs text-zinc-500">في انتظار موافقة الأدمن</p>
             </div>
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-2xl text-amber-400">
               ⏳

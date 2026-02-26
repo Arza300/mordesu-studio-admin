@@ -27,7 +27,7 @@ export default function UsersManagementTable({ users, currentUserId }: Props) {
   const roleLabel: Record<Role, string> = {
     ADMIN: "أدمن",
     VIEWER: "متفرج",
-    USER: "مستخدم",
+    USER: "قيد المراجعة",
   };
 
   async function handleDelete(user: User) {

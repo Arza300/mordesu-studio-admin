@@ -28,13 +28,13 @@ export async function registerAdmin(params: {
 
   const passwordHash = await bcrypt.hash(params.password, 10);
 
-  // كل الحسابات الجديدة تكون برتبة متفرج (قيد المراجعة) — ترقية الأدمن من لوحة التحكم
+  // الحسابات الجديدة تكون قيد المراجعة — الأدمن يغيّر الرتبة إلى متفرج أو أدمن من لوحة التحكم
   const user = await prisma.user.create({
     data: {
       name: params.name,
       email: params.email.toLowerCase(),
       passwordHash,
-      role: "VIEWER",
+      role: "USER",
     },
   });
 

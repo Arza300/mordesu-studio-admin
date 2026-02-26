@@ -77,7 +77,7 @@ export default function EditUserModal({
   const roleLabel: Record<Role, string> = {
     ADMIN: "أدمن",
     VIEWER: "متفرج",
-    USER: "مستخدم",
+    USER: "قيد المراجعة",
   };
 
   return (
@@ -128,7 +128,7 @@ export default function EditUserModal({
             >
               <option value="ADMIN">أدمن</option>
               <option value="VIEWER">متفرج</option>
-              <option value="USER">مستخدم</option>
+              <option value="USER">قيد المراجعة</option>
             </select>
           </div>
           <div className="space-y-1.5">
