@@ -33,6 +33,7 @@ export default function AddGameProjectForm() {
     try {
       const res = await fetch("/api/admin/projects", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,

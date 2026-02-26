@@ -25,6 +25,16 @@ export async function GET() {
   }
 }
 
+function isTableMissingError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  const code = (error as { code?: string })?.code;
+  return (
+    code === "P2021" ||
+    code === "P1014" ||
+    /does not exist|جدول|table/i.test(msg)
+  );
+}
+
 export async function POST(request: Request) {
   const admin = await requireAdmin();
   if (!admin) {
@@ -32,8 +42,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const { name, profits, projectType, projectLink } = body as {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "بيانات الطلب غير صالحة" },
+        { status: 400 },
+      );
+    }
+    const { name, profits, projectType, projectLink } = (body || {}) as {
       name?: string;
       profits?: number;
       projectType?: string;
@@ -70,8 +88,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, project }, { status: 201 });
   } catch (error) {
     console.error("[POST /api/admin/projects]", error);
+    const message = isTableMissingError(error)
+      ? "جدول مشاريع الألعاب غير موجود. من مجلد المشروع شغّل: npx prisma db push"
+      : "حدث خطأ أثناء إضافة المشروع";
     return NextResponse.json(
-      { error: "حدث خطأ أثناء إضافة المشروع" },
+      { error: message },
       { status: 500 },
     );
   }

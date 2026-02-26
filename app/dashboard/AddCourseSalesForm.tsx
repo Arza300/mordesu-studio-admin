@@ -31,6 +31,7 @@ export default function AddCourseSalesForm() {
     try {
       const res = await fetch("/api/admin/course-sales", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ platformName, profits: profitsNum }),
       });

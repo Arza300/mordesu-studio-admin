@@ -32,6 +32,7 @@ export default function AddSanaaEarningsForm() {
     try {
       const res = await fetch("/api/admin/sanaa-earnings", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ viewsAmount: views, collaborationsAmount: collab }),
       });
