@@ -110,7 +110,12 @@ export async function requireAdmin() {
   return user;
 }
 
-/** مستخدم متفرج أو قيد المراجعة (لا يرى لوحة التحكم) */
+/** مستخدم قيد المراجعة فقط (USER) — يوجّه لصفحة /pending ولا يرى لوحة التحكم */
+export function isPendingUser(user: { role: string } | null): boolean {
+  return user?.role === "USER";
+}
+
+/** مستخدم متفرج أو قيد المراجعة (لا يرى لوحة التحكم) — للتوافق مع الكود القديم؛ يُفضّل استخدام isPendingUser */
 export function isPendingViewer(
   user: { role: string } | null,
 ): user is { role: "VIEWER" | "USER" } {

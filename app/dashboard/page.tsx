@@ -1,27 +1,24 @@
 import { redirect } from "next/navigation";
 import { type GameProject, Role } from "@prisma/client";
-import {
-  getCurrentUser,
-  isPendingViewer,
-  requireAdmin,
-} from "@/app/lib/auth";
+import { getCurrentUser, isPendingUser } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import AddSectionsCards from "./AddSectionsCards";
 import ClientsTable from "./ClientsTable";
 import CollapsibleSection from "./CollapsibleSection";
+import CollaborationsTable from "./CollaborationsTable";
 import CourseSalesTable from "./CourseSalesTable";
 import OtherProfitsTable from "./OtherProfitsTable";
 import SanaaEarningsTable from "./SanaaEarningsTable";
+import UsersManagementTable from "./UsersManagementTable";
 
 export const runtime = "nodejs";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
-  if (isPendingViewer(user)) redirect("/pending");
+  if (isPendingUser(user)) redirect("/pending");
 
-  const admin = await requireAdmin();
-  if (!admin) redirect("/");
+  const isAdmin = user.role === "ADMIN";
 
   const [clients, stats] = await Promise.all([
     prisma.client.findMany({
@@ -88,6 +85,19 @@ export default async function DashboardPage() {
     // جدول OtherProfitsEntry غير موجود بعد — npx prisma db push
   }
 
+  let collaborationsSum = 0;
+  let collaborationEntries: { id: string; description: string; monetaryBenefit: number; createdAt: Date }[] = [];
+  try {
+    const [collabAgg, collabList] = await Promise.all([
+      prisma.studioCollaboration.aggregate({ _sum: { monetaryBenefit: true } }),
+      prisma.studioCollaboration.findMany({ orderBy: { createdAt: "desc" } }),
+    ]);
+    collaborationsSum = collabAgg._sum.monetaryBenefit ?? 0;
+    collaborationEntries = collabList;
+  } catch {
+    // جدول StudioCollaboration غير موجود بعد — npx prisma db push
+  }
+
   const totalRevenue =
     (stats._sum.pricePaid ?? 0) +
     (stats._sum.featuresModificationsPrice ?? 0) +
@@ -95,13 +105,23 @@ export default async function DashboardPage() {
     sanaaSum.viewsAmount +
     sanaaSum.collaborationsAmount +
     courseSalesSum +
-    otherProfitsSum;
+    otherProfitsSum +
+    collaborationsSum;
 
   const pendingUsers = await prisma.user.findMany({
     where: { role: { in: [Role.VIEWER, Role.USER] } },
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
+
+  const allUsers = isAdmin
+    ? await prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, email: true, name: true, role: true, createdAt: true },
+      })
+    : [];
+
+  const clientsForTable = isAdmin ? clients : clients.map((c) => ({ ...c, phone: "" }));
 
   return (
     <div className="space-y-8">
@@ -143,7 +163,7 @@ export default async function DashboardPage() {
               <p className="mt-2 text-3xl font-bold tabular-nums text-white">
                 {totalRevenue.toLocaleString("ar-EG")}
               </p>
-              <p className="mt-0.5 text-xs text-zinc-500">وحدة العملة</p>
+              <p className="mt-0.5 text-xs text-zinc-500">جنيه مصري</p>
             </div>
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl text-emerald-400">
               💰
@@ -170,37 +190,55 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* إضافة عميل جديد / إضافة مشاريع — زرّان مربعيان يفتحان النموذج */}
-      <AddSectionsCards />
+      {isAdmin && (
+        <>
+          {/* إضافة عميل جديد / إضافة مشاريع — أزرار تفتح النماذج */}
+          <AddSectionsCards />
+        </>
+      )}
 
       {/* قائمة أرباح منصة صناع */}
       <CollapsibleSection
         title="قائمة أرباح منصة صناع"
-        description="سجلات أرباح المشاهدات والتعاونات — يمكن التعديل أو الحذف"
+        description={isAdmin ? "سجلات أرباح المشاهدات والتعاونات — يمكن التعديل أو الحذف" : "سجلات أرباح المشاهدات والتعاونات"}
         icon="📺"
         badge={sanaaEntries.length}
+        totalSum={sanaaSum.viewsAmount + sanaaSum.collaborationsAmount}
       >
-        <SanaaEarningsTable entries={sanaaEntries} />
+        <SanaaEarningsTable entries={sanaaEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
       {/* قائمة أرباح بيع الكورسات */}
       <CollapsibleSection
         title="قائمة أرباح بيع الكورسات"
-        description="سجلات المنصات والأرباح — يمكن التعديل أو الحذف"
+        description={isAdmin ? "سجلات المنصات والأرباح — يمكن التعديل أو الحذف" : "سجلات المنصات والأرباح"}
         icon="📚"
         badge={courseSalesEntries.length}
+        totalSum={courseSalesSum}
       >
-        <CourseSalesTable entries={courseSalesEntries} />
+        <CourseSalesTable entries={courseSalesEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
       {/* قائمة أرباح أخرى */}
       <CollapsibleSection
         title="قائمة أرباح أخرى"
-        description="سجلات سبب الربح والربح — يمكن التعديل أو الحذف"
+        description={isAdmin ? "سجلات سبب الربح والربح — يمكن التعديل أو الحذف" : "سجلات سبب الربح والربح"}
         icon="💰"
         badge={otherProfitsEntries.length}
+        totalSum={otherProfitsSum}
       >
-        <OtherProfitsTable entries={otherProfitsEntries} />
+        <OtherProfitsTable entries={otherProfitsEntries} canEdit={isAdmin} />
+      </CollapsibleSection>
+
+      {/* قائمة تعاونات الاستوديو */}
+      <CollapsibleSection
+        title="قائمة تعاونات الاستوديو"
+        description={isAdmin ? "تعاونات الاستوديو — يمكن التعديل أو الحذف. الربح العائد ضمن إجمالي الأرباح." : "تعاونات الاستوديو — الربح العائد ضمن إجمالي الأرباح."}
+        icon="🤝"
+        badge={collaborationEntries.length}
+        totalSum={collaborationsSum}
+      >
+        <CollaborationsTable entries={collaborationEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
       {/* قائمة مشاريع الألعاب */}
@@ -209,6 +247,7 @@ export default async function DashboardPage() {
         description="المشاريع المضافة وأرباحها ونوعها (خاص / تابع لمستثمر)"
         icon="🎮"
         badge={gameProjects.length}
+        totalSum={gameProjectsSum._sum.profits ?? 0}
       >
         {gameProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-12 text-center">
@@ -279,6 +318,7 @@ export default async function DashboardPage() {
         description="قائمة منصات العملاء المسجّلين لدى الاستوديو"
         icon="👥"
         badge={clients.length}
+        totalSum={(stats._sum.pricePaid ?? 0) + (stats._sum.featuresModificationsPrice ?? 0)}
       >
         {clients.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-16 text-center">
@@ -291,89 +331,24 @@ export default async function DashboardPage() {
               </p>
             </div>
           ) : (
-            <ClientsTable clients={clients} />
+            <ClientsTable
+              clients={clientsForTable}
+              canEdit={isAdmin}
+              hidePhone={!isAdmin}
+            />
           )}
       </CollapsibleSection>
 
-      {/* قسم الحسابات قيد المراجعة */}
-      <CollapsibleSection
-        title="الحسابات قيد المراجعة"
-        description="حسابات المتفرجين في انتظار الموافقة لترقيتهم إلى أدمن"
-        icon="⏳"
-        badge={pendingUsers.length}
-      >
-        {pendingUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-16 text-center">
-              <span className="mb-3 text-4xl opacity-60">✅</span>
-              <p className="text-sm font-medium text-zinc-400">
-                لا يوجد حسابات في انتظار الموافقة
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                الحسابات الجديدة ستظهر هنا حتى يتم ترقيتها
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-zinc-800/80">
-              <table className="min-w-full text-right">
-                <thead>
-                  <tr className="border-b border-zinc-800 bg-zinc-800/50">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      البريد
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      الاسم
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      تاريخ التسجيل
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      إجراء
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/80">
-                  {pendingUsers.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="transition hover:bg-zinc-800/30"
-                    >
-                      <td className="px-4 py-3 text-sm text-zinc-300" dir="ltr">
-                        {u.email}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-white">
-                        {u.name || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-zinc-500">
-                        {new Date(u.createdAt).toLocaleDateString("ar-EG", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className="px-4 py-3">
-                        <PromoteButton userId={u.id} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-      </CollapsibleSection>
+      {isAdmin && (
+        <CollapsibleSection
+          title="إدارة المستخدمين"
+          description="عرض كل الحسابات — تعديل البيانات أو الرتبة أو حذف الحساب"
+          icon="👥"
+          badge={allUsers.length}
+        >
+          <UsersManagementTable users={allUsers} currentUserId={user.id} />
+        </CollapsibleSection>
+      )}
     </div>
-  );
-}
-
-function PromoteButton({ userId }: { userId: string }) {
-  return (
-    <form action="/api/admin/users/promote" method="post">
-      <input type="hidden" name="userId" value={userId} />
-      <button
-        type="submit"
-        className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-500 hover:shadow-cyan-500/30"
-      >
-        ترقية إلى أدمن
-      </button>
-    </form>
   );
 }

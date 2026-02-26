@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, isPendingViewer } from "@/app/lib/auth";
+import { getCurrentUser } from "@/app/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -8,10 +8,10 @@ export default async function PendingPage() {
   if (!user) {
     redirect("/");
   }
-  if (user.role === "ADMIN") {
+  if (user.role === "ADMIN" || user.role === "VIEWER") {
     redirect("/dashboard");
   }
-  if (!isPendingViewer(user)) {
+  if (user.role !== "USER") {
     redirect("/");
   }
 

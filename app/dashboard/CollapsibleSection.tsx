@@ -7,6 +7,8 @@ type Props = {
   description?: string;
   icon?: string;
   badge?: string | number;
+  /** مجموع الأرباح في هذه القائمة فقط — يظهر عند فتح القائمة */
+  totalSum?: number;
   children: React.ReactNode;
   defaultOpen?: boolean;
 };
@@ -16,6 +18,7 @@ export default function CollapsibleSection({
   description,
   icon,
   badge,
+  totalSum,
   children,
   defaultOpen = false,
 }: Props) {
@@ -62,6 +65,11 @@ export default function CollapsibleSection({
       </button>
       {open && (
         <div className="border-t border-zinc-800/80 p-6">
+          {totalSum !== undefined && (
+            <p className="mb-4 rounded-lg bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-400">
+              مجموع الأرباح في هذه القائمة: {totalSum.toLocaleString("ar-EG")} جنيه مصري
+            </p>
+          )}
           {children}
         </div>
       )}

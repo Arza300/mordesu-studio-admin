@@ -11,7 +11,9 @@ type CourseSalesEntry = {
   createdAt: Date;
 };
 
-export default function CourseSalesTable({ entries }: { entries: CourseSalesEntry[] }) {
+type Props = { entries: CourseSalesEntry[]; canEdit?: boolean };
+
+export default function CourseSalesTable({ entries, canEdit = true }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<CourseSalesEntry | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -64,9 +66,11 @@ export default function CourseSalesTable({ entries }: { entries: CourseSalesEntr
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 الأرباح
               </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                إجراء
-              </th>
+              {canEdit && (
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  إجراء
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/80">
@@ -77,25 +81,27 @@ export default function CourseSalesTable({ entries }: { entries: CourseSalesEntr
                 <td className="px-4 py-3 text-sm tabular-nums text-zinc-300">
                   {entry.profits.toLocaleString("ar-EG")}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(entry)}
-                      className="rounded-xl bg-amber-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500/90"
-                    >
-                      تعديل
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(entry)}
-                      disabled={deletingId === entry.id}
-                      className="rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500/90 disabled:opacity-50"
-                    >
-                      {deletingId === entry.id ? "جاري الحذف..." : "حذف"}
-                    </button>
-                  </div>
-                </td>
+                {canEdit && (
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(entry)}
+                        className="rounded-xl bg-amber-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500/90"
+                      >
+                        تعديل
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(entry)}
+                        disabled={deletingId === entry.id}
+                        className="rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500/90 disabled:opacity-50"
+                      >
+                        {deletingId === entry.id ? "جاري الحذف..." : "حذف"}
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

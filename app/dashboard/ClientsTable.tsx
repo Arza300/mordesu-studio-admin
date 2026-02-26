@@ -14,7 +14,13 @@ type Client = {
   featuresModificationsPrice?: number | null;
 };
 
-export default function ClientsTable({ clients }: { clients: Client[] }) {
+type Props = {
+  clients: Client[];
+  canEdit?: boolean;
+  hidePhone?: boolean;
+};
+
+export default function ClientsTable({ clients, canEdit = true, hidePhone = false }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -27,7 +33,8 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
           const q = searchTrim.replace(/\s/g, "");
           const match = (s: string) =>
             s.includes(searchTrim) || s.replace(/\s/g, "").includes(q);
-          return match(c.name) || match(c.platformName) || match(c.phone);
+          const byPhone = hidePhone ? false : match(c.phone);
+          return match(c.name) || match(c.platformName) || byPhone;
         },
       )
     : clients;
@@ -52,14 +59,14 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
     <>
       <div className="mb-4">
         <label htmlFor="client-search" className="sr-only">
-          بحث بالاسم أو اسم المنصة أو رقم الهاتف
+          {hidePhone ? "بحث بالاسم أو اسم المنصة" : "بحث بالاسم أو اسم المنصة أو رقم الهاتف"}
         </label>
         <input
           id="client-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="بحث بالاسم أو اسم المنصة أو رقم الهاتف..."
+          placeholder={hidePhone ? "بحث بالاسم أو اسم المنصة..." : "بحث بالاسم أو اسم المنصة أو رقم الهاتف..."}
           dir="rtl"
           className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-sm text-right text-white placeholder:text-zinc-500 focus:border-cyan-500/60 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
         />
@@ -94,15 +101,17 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 المميزات والتعديلات
               </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                إجراء
-              </th>
+              {canEdit && (
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  إجراء
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/80">
             {filteredClients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-zinc-500">
+                <td colSpan={canEdit ? 7 : 6} className="px-4 py-12 text-center text-sm text-zinc-500">
                   {searchTrim ? "لا توجد نتائج مطابقة للبحث." : "لا يوجد عملاء."}
                 </td>
               </tr>
@@ -112,7 +121,7 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                 <td className="px-4 py-3 text-sm font-medium text-white">{client.name}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{client.platformName}</td>
                 <td className="px-4 py-3 text-sm text-zinc-400" dir="ltr">
-                  {client.phone}
+                  {hidePhone ? "—" : client.phone}
                 </td>
                 <td className="px-4 py-3">
                   <a
@@ -121,8 +130,8 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-sm font-medium text-cyan-400 transition hover:text-cyan-300"
                   >
-رابط الموقع
-                          <span className="text-cyan-500/70">↗</span>
+                    رابط الموقع
+                    <span className="text-cyan-500/70">↗</span>
                   </a>
                 </td>
                 <td className="px-4 py-3 text-sm tabular-nums text-zinc-300">
@@ -131,25 +140,27 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
                 <td className="px-4 py-3 text-sm tabular-nums text-zinc-300">
                   {(client.featuresModificationsPrice ?? 0).toLocaleString("ar-EG")}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingClient(client)}
-                      className="rounded-xl bg-amber-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500/90"
-                    >
-                      تعديل
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(client)}
-                      disabled={deletingId === client.id}
-                      className="rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500/90 disabled:opacity-50"
-                    >
-                      {deletingId === client.id ? "جاري الحذف..." : "حذف"}
-                    </button>
-                  </div>
-                </td>
+                {canEdit && (
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingClient(client)}
+                        className="rounded-xl bg-amber-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500/90"
+                      >
+                        تعديل
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(client)}
+                        disabled={deletingId === client.id}
+                        className="rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500/90 disabled:opacity-50"
+                      >
+                        {deletingId === client.id ? "جاري الحذف..." : "حذف"}
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
               ))
             )}

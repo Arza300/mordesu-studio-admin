@@ -64,6 +64,13 @@ model OtherProfitsEntry {
   createdAt DateTime @default(now())
 }
 
+model StudioCollaboration {
+  id              String   @id @default(cuid())
+  description     String   // وصف التعاون
+  monetaryBenefit Int      // الربح العائد من هذا التعاون
+  createdAt       DateTime @default(now())
+}
+
 enum ProjectType {
   PRIVATE   // مشروع خاص
   INVESTOR  // تابع لمستثمر
