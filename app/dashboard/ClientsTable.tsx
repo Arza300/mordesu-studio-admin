@@ -23,11 +23,12 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
   const searchTrim = search.trim();
   const filteredClients = searchTrim
     ? clients.filter(
-        (c) =>
-          c.name.includes(searchTrim) ||
-          c.phone.includes(searchTrim) ||
-          c.name.replace(/\s/g, "").includes(searchTrim.replace(/\s/g, "")) ||
-          c.phone.replace(/\s/g, "").includes(searchTrim.replace(/\s/g, "")),
+        (c) => {
+          const q = searchTrim.replace(/\s/g, "");
+          const match = (s: string) =>
+            s.includes(searchTrim) || s.replace(/\s/g, "").includes(q);
+          return match(c.name) || match(c.platformName) || match(c.phone);
+        },
       )
     : clients;
 
@@ -51,14 +52,14 @@ export default function ClientsTable({ clients }: { clients: Client[] }) {
     <>
       <div className="mb-4">
         <label htmlFor="client-search" className="sr-only">
-          بحث بالاسم أو رقم الهاتف
+          بحث بالاسم أو اسم المنصة أو رقم الهاتف
         </label>
         <input
           id="client-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="بحث بالاسم أو رقم الهاتف..."
+          placeholder="بحث بالاسم أو اسم المنصة أو رقم الهاتف..."
           dir="rtl"
           className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-800/80 px-4 py-2.5 text-sm text-right text-white placeholder:text-zinc-500 focus:border-cyan-500/60 focus:outline-none focus:ring-1 focus:ring-cyan-500/40"
         />

@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
-import { Role } from "@prisma/client";
+import { type GameProject, Role } from "@prisma/client";
 import {
   getCurrentUser,
   isPendingViewer,
   requireAdmin,
 } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
-import AddClientForm from "./AddClientForm";
+import AddSectionsCards from "./AddSectionsCards";
 import ClientsTable from "./ClientsTable";
+import CollapsibleSection from "./CollapsibleSection";
+import CourseSalesTable from "./CourseSalesTable";
+import SanaaEarningsTable from "./SanaaEarningsTable";
 
 export const runtime = "nodejs";
 
@@ -29,7 +32,55 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const totalRevenue = (stats._sum.pricePaid ?? 0) + (stats._sum.featuresModificationsPrice ?? 0);
+  let gameProjects: GameProject[] = [];
+  let gameProjectsSum = { _sum: { profits: null as number | null } };
+  try {
+    [gameProjects, gameProjectsSum] = await Promise.all([
+      prisma.gameProject.findMany({ orderBy: { createdAt: "desc" } }),
+      prisma.gameProject.aggregate({ _sum: { profits: true } }),
+    ]);
+  } catch {
+    // جدول GameProject غير موجود بعد — تشغيل scripts/add-game-projects-table.sql أو npx prisma db push
+  }
+
+  let sanaaSum = { viewsAmount: 0, collaborationsAmount: 0 };
+  let sanaaEntries: { id: string; viewsAmount: number; collaborationsAmount: number; createdAt: Date }[] = [];
+  try {
+    const [sanaaAgg, sanaaList] = await Promise.all([
+      prisma.sanaaEarningsEntry.aggregate({
+        _sum: { viewsAmount: true, collaborationsAmount: true },
+      }),
+      prisma.sanaaEarningsEntry.findMany({ orderBy: { createdAt: "desc" } }),
+    ]);
+    sanaaSum = {
+      viewsAmount: sanaaAgg._sum.viewsAmount ?? 0,
+      collaborationsAmount: sanaaAgg._sum.collaborationsAmount ?? 0,
+    };
+    sanaaEntries = sanaaList;
+  } catch {
+    // جدول SanaaEarningsEntry غير موجود بعد — npx prisma db push
+  }
+
+  let courseSalesSum = 0;
+  let courseSalesEntries: { id: string; platformName: string; profits: number; createdAt: Date }[] = [];
+  try {
+    const [courseAgg, courseList] = await Promise.all([
+      prisma.courseSalesEntry.aggregate({ _sum: { profits: true } }),
+      prisma.courseSalesEntry.findMany({ orderBy: { createdAt: "desc" } }),
+    ]);
+    courseSalesSum = courseAgg._sum.profits ?? 0;
+    courseSalesEntries = courseList;
+  } catch {
+    // جدول CourseSalesEntry غير موجود بعد — npx prisma db push
+  }
+
+  const totalRevenue =
+    (stats._sum.pricePaid ?? 0) +
+    (stats._sum.featuresModificationsPrice ?? 0) +
+    (gameProjectsSum._sum.profits ?? 0) +
+    sanaaSum.viewsAmount +
+    sanaaSum.collaborationsAmount +
+    courseSalesSum;
 
   const pendingUsers = await prisma.user.findMany({
     where: { role: { in: [Role.VIEWER, Role.USER] } },
@@ -104,33 +155,107 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* إضافة عميل جديد */}
-      <section className="rounded-2xl border border-zinc-800/80 bg-zinc-900/30 shadow-xl">
-        <div className="border-b border-zinc-800/80 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">
-            إضافة عميل جديد
-          </h2>
-          <p className="mt-0.5 text-sm text-zinc-400">
-            أدخل بيانات العميل والمنصة ثم احفظ
-          </p>
-        </div>
-        <div className="p-6">
-          <AddClientForm />
-        </div>
-      </section>
+      {/* إضافة عميل جديد / إضافة مشاريع — زرّان مربعيان يفتحان النموذج */}
+      <AddSectionsCards />
+
+      {/* قائمة أرباح منصة صناع */}
+      <CollapsibleSection
+        title="قائمة أرباح منصة صناع"
+        description="سجلات أرباح المشاهدات والتعاونات — يمكن التعديل أو الحذف"
+        icon="📺"
+        badge={sanaaEntries.length}
+      >
+        <SanaaEarningsTable entries={sanaaEntries} />
+      </CollapsibleSection>
+
+      {/* قائمة أرباح بيع الكورسات */}
+      <CollapsibleSection
+        title="قائمة أرباح بيع الكورسات"
+        description="سجلات المنصات والأرباح — يمكن التعديل أو الحذف"
+        icon="📚"
+        badge={courseSalesEntries.length}
+      >
+        <CourseSalesTable entries={courseSalesEntries} />
+      </CollapsibleSection>
+
+      {/* قائمة مشاريع الألعاب */}
+      <CollapsibleSection
+        title="قائمة مشاريع الألعاب"
+        description="المشاريع المضافة وأرباحها ونوعها (خاص / تابع لمستثمر)"
+        icon="🎮"
+        badge={gameProjects.length}
+      >
+        {gameProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-12 text-center">
+              <span className="mb-2 text-3xl opacity-60">🎮</span>
+              <p className="text-sm font-medium text-zinc-400">
+                لا توجد مشاريع حتى الآن
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">
+                أضف مشاريع من القسم أعلاه
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-zinc-800/80">
+              <table className="min-w-full text-right">
+                <thead>
+                  <tr className="border-b border-zinc-800 bg-zinc-800/50">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      اسم اللعبة
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      الأرباح
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      رابط المشروع
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      نوع المشروع
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/80">
+                  {gameProjects.map((p) => (
+                    <tr key={p.id} className="transition hover:bg-zinc-800/30">
+                      <td className="px-4 py-3 text-sm font-medium text-white">
+                        {p.name}
+                      </td>
+                      <td className="px-4 py-3 text-sm tabular-nums text-zinc-300">
+                        {p.profits.toLocaleString("ar-EG")}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {p.projectLink ? (
+                          <a
+                            href={p.projectLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-400 hover:underline"
+                          >
+                            رابط
+                          </a>
+                        ) : (
+                          <span className="text-zinc-500">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-zinc-400">
+                        {p.projectType === "INVESTOR" ? "تابع لمستثمر" : "مشروع خاص"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+      </CollapsibleSection>
 
       {/* إدارة العملاء */}
-      <section className="rounded-2xl border border-zinc-800/80 bg-zinc-900/30 shadow-xl">
-        <div className="border-b border-zinc-800/80 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">
-            إدارة العملاء
-          </h2>
-          <p className="mt-0.5 text-sm text-zinc-400">
-            قائمة منصات العملاء المسجّلين لدى الاستوديو
-          </p>
-        </div>
-        <div className="p-6">
-          {clients.length === 0 ? (
+      <CollapsibleSection
+        title="إدارة العملاء"
+        description="قائمة منصات العملاء المسجّلين لدى الاستوديو"
+        icon="👥"
+        badge={clients.length}
+      >
+        {clients.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-16 text-center">
               <span className="mb-3 text-4xl opacity-60">📋</span>
               <p className="text-sm font-medium text-zinc-400">
@@ -143,21 +268,16 @@ export default async function DashboardPage() {
           ) : (
             <ClientsTable clients={clients} />
           )}
-        </div>
-      </section>
+      </CollapsibleSection>
 
       {/* قسم الحسابات قيد المراجعة */}
-      <section className="rounded-2xl border border-zinc-800/80 bg-zinc-900/30 shadow-xl">
-        <div className="border-b border-zinc-800/80 px-6 py-4">
-          <h2 className="text-lg font-semibold text-white">
-            الحسابات قيد المراجعة
-          </h2>
-          <p className="mt-0.5 text-sm text-zinc-400">
-            حسابات المتفرجين في انتظار الموافقة لترقيتهم إلى أدمن
-          </p>
-        </div>
-        <div className="p-6">
-          {pendingUsers.length === 0 ? (
+      <CollapsibleSection
+        title="الحسابات قيد المراجعة"
+        description="حسابات المتفرجين في انتظار الموافقة لترقيتهم إلى أدمن"
+        icon="⏳"
+        badge={pendingUsers.length}
+      >
+        {pendingUsers.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-16 text-center">
               <span className="mb-3 text-4xl opacity-60">✅</span>
               <p className="text-sm font-medium text-zinc-400">
@@ -214,8 +334,7 @@ export default async function DashboardPage() {
               </table>
             </div>
           )}
-        </div>
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }

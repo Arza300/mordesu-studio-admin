@@ -34,6 +34,34 @@ model Client {
   createdAt                  DateTime @default(now())
 }
 
+model GameProject {
+  id          String      @id @default(cuid())
+  name        String      // اسم اللعبة
+  profits     Int         // أرباح اللعبة
+  projectType ProjectType // مشروع خاص أو تابع لمستثمر
+  projectLink String?     // رابط المشروع
+  createdAt   DateTime    @default(now())
+}
+
+model SanaaEarningsEntry {
+  id                   String   @id @default(cuid())
+  viewsAmount          Int      @default(0)  // أرباح من المشاهدات
+  collaborationsAmount Int      @default(0)  // تعاونات
+  createdAt            DateTime @default(now())
+}
+
+model CourseSalesEntry {
+  id           String   @id @default(cuid())
+  platformName String   // اسم المنصة
+  profits      Int      // الأرباح من المنصة
+  createdAt    DateTime @default(now())
+}
+
+enum ProjectType {
+  PRIVATE   // مشروع خاص
+  INVESTOR  // تابع لمستثمر
+}
+
 enum Role {
   ADMIN
   VIEWER
