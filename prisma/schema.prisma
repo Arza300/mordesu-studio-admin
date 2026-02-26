@@ -57,6 +57,13 @@ model CourseSalesEntry {
   createdAt    DateTime @default(now())
 }
 
+model OtherProfitsEntry {
+  id        String   @id @default(cuid())
+  reason    String   // سبب الربح
+  profit    Int      // الربح
+  createdAt DateTime @default(now())
+}
+
 enum ProjectType {
   PRIVATE   // مشروع خاص
   INVESTOR  // تابع لمستثمر

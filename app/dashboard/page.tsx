@@ -10,6 +10,7 @@ import AddSectionsCards from "./AddSectionsCards";
 import ClientsTable from "./ClientsTable";
 import CollapsibleSection from "./CollapsibleSection";
 import CourseSalesTable from "./CourseSalesTable";
+import OtherProfitsTable from "./OtherProfitsTable";
 import SanaaEarningsTable from "./SanaaEarningsTable";
 
 export const runtime = "nodejs";
@@ -74,13 +75,27 @@ export default async function DashboardPage() {
     // جدول CourseSalesEntry غير موجود بعد — npx prisma db push
   }
 
+  let otherProfitsSum = 0;
+  let otherProfitsEntries: { id: string; reason: string; profit: number; createdAt: Date }[] = [];
+  try {
+    const [otherAgg, otherList] = await Promise.all([
+      prisma.otherProfitsEntry.aggregate({ _sum: { profit: true } }),
+      prisma.otherProfitsEntry.findMany({ orderBy: { createdAt: "desc" } }),
+    ]);
+    otherProfitsSum = otherAgg._sum.profit ?? 0;
+    otherProfitsEntries = otherList;
+  } catch {
+    // جدول OtherProfitsEntry غير موجود بعد — npx prisma db push
+  }
+
   const totalRevenue =
     (stats._sum.pricePaid ?? 0) +
     (stats._sum.featuresModificationsPrice ?? 0) +
     (gameProjectsSum._sum.profits ?? 0) +
     sanaaSum.viewsAmount +
     sanaaSum.collaborationsAmount +
-    courseSalesSum;
+    courseSalesSum +
+    otherProfitsSum;
 
   const pendingUsers = await prisma.user.findMany({
     where: { role: { in: [Role.VIEWER, Role.USER] } },
@@ -176,6 +191,16 @@ export default async function DashboardPage() {
         badge={courseSalesEntries.length}
       >
         <CourseSalesTable entries={courseSalesEntries} />
+      </CollapsibleSection>
+
+      {/* قائمة أرباح أخرى */}
+      <CollapsibleSection
+        title="قائمة أرباح أخرى"
+        description="سجلات سبب الربح والربح — يمكن التعديل أو الحذف"
+        icon="💰"
+        badge={otherProfitsEntries.length}
+      >
+        <OtherProfitsTable entries={otherProfitsEntries} />
       </CollapsibleSection>
 
       {/* قائمة مشاريع الألعاب */}
