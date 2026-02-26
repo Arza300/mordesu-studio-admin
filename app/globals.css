@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --text-scale: 1.15; /* تكبير الخط فقط دون تغيير أحجام التصميم */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* تكبير حجم الخط فقط (النصوص) مع الإبقاء على أحجام التصميم */
+.text-xs { font-size: calc(0.75rem * var(--text-scale)) !important; }
+.text-sm { font-size: calc(0.875rem * var(--text-scale)) !important; }
+.text-base { font-size: calc(1rem * var(--text-scale)) !important; }
+.text-lg { font-size: calc(1.125rem * var(--text-scale)) !important; }
+.text-xl { font-size: calc(1.25rem * var(--text-scale)) !important; }
+.text-2xl { font-size: calc(1.5rem * var(--text-scale)) !important; }
+.text-3xl { font-size: calc(1.875rem * var(--text-scale)) !important; }
+.text-4xl { font-size: calc(2.25rem * var(--text-scale)) !important; }
+.text-5xl { font-size: calc(3rem * var(--text-scale)) !important; }
+
+@keyframes logo-glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(34, 211, 238, 0.35)) drop-shadow(0 0 28px rgba(34, 211, 238, 0.15));
+  }
+  50% {
+    filter: drop-shadow(0 0 24px rgba(34, 211, 238, 0.65)) drop-shadow(0 0 50px rgba(34, 211, 238, 0.3));
+  }
+}
+
+.logo-glow-pulse {
+  animation: logo-glow-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 25s linear infinite;
+}
