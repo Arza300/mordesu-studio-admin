@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, isPendingUser } from "@/app/lib/auth";
 import Link from "next/link";
 import DashboardHeaderUser from "./DashboardHeaderUser";
+import LogoutButton from "./LogoutButton";
 
 export const runtime = "nodejs";
 
@@ -33,14 +34,7 @@ export default async function DashboardLayout({
                 {user.name || user.email}
               </span>
             )}
-            <form action="/api/auth/logout" method="post">
-              <button
-                type="submit"
-                className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 hover:text-white"
-              >
-                خروج
-              </button>
-            </form>
+            <LogoutButton />
           </div>
           <Link
             href="/dashboard"

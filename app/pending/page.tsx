@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/app/lib/auth";
+import LogoutButton from "@/app/dashboard/LogoutButton";
 
 export const runtime = "nodejs";
 
@@ -30,14 +31,11 @@ export default async function PendingPage() {
           البريد المسجّل: <span className="text-zinc-300">{user.email}</span>
         </p>
         <div className="mt-8">
-          <form action="/api/auth/logout" method="post">
-            <button
-              type="submit"
-              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
-            >
-              تسجيل الخروج
-            </button>
-          </form>
+          <LogoutButton
+            label="تسجيل الخروج"
+            loadingLabel="جاري الخروج..."
+            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:bg-zinc-800 hover:text-white disabled:opacity-60"
+          />
         </div>
       </div>
     </main>

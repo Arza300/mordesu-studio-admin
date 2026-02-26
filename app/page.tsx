@@ -1,5 +1,6 @@
 "use client";
 
+import LoadingOverlay from "@/app/components/LoadingOverlay";
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,11 @@ export default function Home() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black text-zinc-100">
+      {loading && (
+        <LoadingOverlay
+          message={authMode === "login" ? "جاري تسجيل الدخول..." : "جاري إنشاء الحساب..."}
+        />
+      )}
       {/* خلفية ثابتة */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_#22d3ee33,_transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-40">
