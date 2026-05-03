@@ -31,6 +31,8 @@ model Client {
   imageUrl                   String?
   pricePaid                  Int      // سعر تكلفة المنصة (المبلغ المدفوع)
   featuresModificationsPrice Int      @default(0) // سعر المميزات والتعديلات التي طلبها العميل
+  projectAccounts            Json? // حساب GitHub / رابط المشروع (JSON)
+  subscriptions              Json? // اشتراكات دومين/هوست/تخزين (JSON)
   createdAt                  DateTime @default(now())
 }
 

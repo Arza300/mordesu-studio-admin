@@ -2,7 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Handshake, Pencil, Trash2 } from "lucide-react";
 import EditCollaborationModal from "./EditCollaborationModal";
+import DataTableShell from "./ui/DataTableShell";
+import SectionEmptyState from "./ui/SectionEmptyState";
+import {
+  tableActionGroup,
+  tableBody,
+  tableBtnDelete,
+  tableBtnEdit,
+  tableHeadRow,
+  tableRow,
+  tableTd,
+  tableTdMuted,
+  tableTdNums,
+  tableTdStrong,
+  tableTh,
+} from "./ui/tableClasses";
 
 type CollaborationEntry = {
   id: string;
@@ -13,13 +29,21 @@ type CollaborationEntry = {
 
 type Props = { entries: CollaborationEntry[]; canEdit?: boolean };
 
-export default function CollaborationsTable({ entries, canEdit = true }: Props) {
+export default function CollaborationsTable({
+  entries,
+  canEdit = true,
+}: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<CollaborationEntry | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleDelete(entry: CollaborationEntry) {
-    if (!confirm(`هل تريد حذف تعاون "${entry.description.slice(0, 50)}..."؟ لا يمكن التراجع.`)) return;
+    if (
+      !confirm(
+        `هل تريد حذف تعاون "${entry.description.slice(0, 50)}..."؟ لا يمكن التراجع.`,
+      )
+    )
+      return;
     setDeletingId(entry.id);
     try {
       const res = await fetch(`/api/admin/collaborations/${entry.id}`, {
@@ -46,78 +70,70 @@ export default function CollaborationsTable({ entries, canEdit = true }: Props) 
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-12 text-center">
-        <span className="mb-2 text-3xl opacity-60">🤝</span>
-        <p className="text-sm font-medium text-zinc-400">لا توجد تعاونات حتى الآن</p>
-        <p className="mt-1 text-xs text-zinc-500">أضف تعاوناً من قسم تعاونات الاستوديو أعلاه</p>
-      </div>
+      <SectionEmptyState
+        icon={Handshake}
+        title="لا توجد تعاونات حتى الآن"
+        description="أضف تعاوناً من قسم تعاونات الاستوديو أعلاه"
+      />
     );
   }
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-zinc-800/80">
-        <table className="min-w-full text-right">
+      <DataTableShell>
+        <table className="min-w-full text-start">
           <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-800/50">
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                التاريخ
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                وصف التعاون
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                الربح العائد
-              </th>
-              {canEdit && (
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  إجراء
-                </th>
-              )}
+            <tr className={tableHeadRow}>
+              <th className={tableTh}>التاريخ</th>
+              <th className={tableTh}>وصف التعاون</th>
+              <th className={tableTh}>الربح العائد</th>
+              {canEdit ? <th className={tableTh}>إجراء</th> : null}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800/80">
+          <tbody className={tableBody}>
             {entries.map((entry) => (
-              <tr key={entry.id} className="transition hover:bg-zinc-800/30">
-                <td className="px-4 py-3 text-sm text-zinc-400">{formatDate(entry.createdAt)}</td>
-                <td className="max-w-[280px] px-4 py-3 text-sm font-medium text-white">
+              <tr key={entry.id} className={tableRow}>
+                <td className={tableTdMuted}>{formatDate(entry.createdAt)}</td>
+                <td className={`max-w-[280px] ${tableTdStrong}`}>
                   <span className="line-clamp-2">{entry.description}</span>
                 </td>
-                <td className="px-4 py-3 text-sm tabular-nums text-zinc-300">
+                <td className={tableTdNums}>
                   {entry.monetaryBenefit.toLocaleString("ar-EG")}
                 </td>
-                {canEdit && (
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
+                {canEdit ? (
+                  <td className={tableTd}>
+                    <div className={tableActionGroup}>
                       <button
                         type="button"
                         onClick={() => setEditing(entry)}
-                        className="rounded-xl bg-amber-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500/90"
+                        className={tableBtnEdit}
                       >
+                        <Pencil aria-hidden />
                         تعديل
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(entry)}
                         disabled={deletingId === entry.id}
-                        className="rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500/90 disabled:opacity-50"
+                        className={tableBtnDelete}
                       >
+                        <Trash2 aria-hidden />
                         {deletingId === entry.id ? "جاري الحذف..." : "حذف"}
                       </button>
                     </div>
                   </td>
-                )}
+                ) : null}
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-      {editing && (
+      </DataTableShell>
+      {editing ? (
         <EditCollaborationModal
           entry={editing}
           onClose={() => setEditing(null)}
         />
-      )}
+      ) : null}
     </>
   );
 }

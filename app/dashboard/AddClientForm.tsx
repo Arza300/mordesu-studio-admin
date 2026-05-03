@@ -2,12 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ClientExtrasFields from "./ClientExtrasFields";
+import {
+  defaultProjectAccountsState,
+  defaultSubscriptionsState,
+  type ProjectAccountsState,
+  type SubscriptionsState,
+} from "@/app/lib/client-extras";
 
 export default function AddClientForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [projectAccounts, setProjectAccounts] = useState<ProjectAccountsState>(
+    defaultProjectAccountsState,
+  );
+  const [subscriptions, setSubscriptions] = useState<SubscriptionsState>(
+    defaultSubscriptionsState,
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,6 +54,8 @@ export default function AddClientForm() {
           platformUrl,
           pricePaid: Math.max(0, parseInt(String(pricePaid), 10) || 0),
           featuresModificationsPrice: Math.max(0, parseInt(String(featuresModificationsPrice), 10) || 0),
+          projectAccounts,
+          subscriptions,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -51,6 +66,8 @@ export default function AddClientForm() {
       }
       setSuccess(true);
       form.reset();
+      setProjectAccounts(defaultProjectAccountsState());
+      setSubscriptions(defaultSubscriptionsState());
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "فشل إضافة العميل");
@@ -151,6 +168,13 @@ export default function AddClientForm() {
           />
         </div>
       </div>
+
+      <ClientExtrasFields
+        projectAccounts={projectAccounts}
+        setProjectAccounts={setProjectAccounts}
+        subscriptions={subscriptions}
+        setSubscriptions={setSubscriptions}
+      />
 
       {error && (
         <p className="text-sm text-red-400">{error}</p>

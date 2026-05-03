@@ -1,5 +1,17 @@
 import { redirect } from "next/navigation";
 import { type GameProject, Role } from "@prisma/client";
+import {
+  Users,
+  Wallet,
+  Hourglass,
+  Tv,
+  BookOpen,
+  Coins,
+  Handshake,
+  Gamepad2,
+  ClipboardList,
+  UserCog,
+} from "lucide-react";
 import { getCurrentUser, isPendingUser } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 import AddSectionsCards from "./AddSectionsCards";
@@ -7,11 +19,25 @@ import ClientsTable from "./ClientsTable";
 import CollapsibleSection from "./CollapsibleSection";
 import CollaborationsTable from "./CollaborationsTable";
 import CourseSalesTable from "./CourseSalesTable";
+import DashboardQuickNav from "./DashboardQuickNav";
 import OtherProfitsTable from "./OtherProfitsTable";
 import SanaaEarningsTable from "./SanaaEarningsTable";
+import StatCard from "./StatCard";
 import UsersManagementTable from "./UsersManagementTable";
+import DataTableShell from "./ui/DataTableShell";
+import SectionEmptyState from "./ui/SectionEmptyState";
+import {
+  tableBody,
+  tableHeadRow,
+  tableRow,
+  tableTd,
+  tableTdNums,
+  tableTdStrong,
+  tableTh,
+} from "./ui/tableClasses";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -42,7 +68,12 @@ export default async function DashboardPage() {
   }
 
   let sanaaSum = { viewsAmount: 0, collaborationsAmount: 0 };
-  let sanaaEntries: { id: string; viewsAmount: number; collaborationsAmount: number; createdAt: Date }[] = [];
+  let sanaaEntries: {
+    id: string;
+    viewsAmount: number;
+    collaborationsAmount: number;
+    createdAt: Date;
+  }[] = [];
   try {
     const [sanaaAgg, sanaaList] = await Promise.all([
       prisma.sanaaEarningsEntry.aggregate({
@@ -60,7 +91,12 @@ export default async function DashboardPage() {
   }
 
   let courseSalesSum = 0;
-  let courseSalesEntries: { id: string; platformName: string; profits: number; createdAt: Date }[] = [];
+  let courseSalesEntries: {
+    id: string;
+    platformName: string;
+    profits: number;
+    createdAt: Date;
+  }[] = [];
   try {
     const [courseAgg, courseList] = await Promise.all([
       prisma.courseSalesEntry.aggregate({ _sum: { profits: true } }),
@@ -73,7 +109,12 @@ export default async function DashboardPage() {
   }
 
   let otherProfitsSum = 0;
-  let otherProfitsEntries: { id: string; reason: string; profit: number; createdAt: Date }[] = [];
+  let otherProfitsEntries: {
+    id: string;
+    reason: string;
+    profit: number;
+    createdAt: Date;
+  }[] = [];
   try {
     const [otherAgg, otherList] = await Promise.all([
       prisma.otherProfitsEntry.aggregate({ _sum: { profit: true } }),
@@ -86,7 +127,12 @@ export default async function DashboardPage() {
   }
 
   let collaborationsSum = 0;
-  let collaborationEntries: { id: string; description: string; monetaryBenefit: number; createdAt: Date }[] = [];
+  let collaborationEntries: {
+    id: string;
+    description: string;
+    monetaryBenefit: number;
+    createdAt: Date;
+  }[] = [];
   try {
     const [collabAgg, collabList] = await Promise.all([
       prisma.studioCollaboration.aggregate({ _sum: { monetaryBenefit: true } }),
@@ -123,232 +169,230 @@ export default async function DashboardPage() {
 
   const clientsForTable = isAdmin ? clients : clients.map((c) => ({ ...c, phone: "" }));
 
+  const displayName = user.name?.trim() || user.email.split("@")[0];
+
+  const quickNavItems = [
+    { href: "#section-overview", label: "نظرة عامة" },
+    ...(isAdmin ? [{ href: "#section-add", label: "إضافة بيانات" }] : []),
+    { href: "#section-sanaa", label: "أرباح صناع" },
+    { href: "#section-courses", label: "الكورسات" },
+    { href: "#section-other", label: "أرباح أخرى" },
+    { href: "#section-collabs", label: "التعاونات" },
+    { href: "#section-games", label: "مشاريع الألعاب" },
+    { href: "#section-clients", label: "العملاء" },
+    ...(isAdmin ? [{ href: "#section-users", label: "المستخدمين" }] : []),
+  ];
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">
-          لوحة التحكم
-        </h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          إدارة العملاء والحسابات والمراجعات
-        </p>
-      </div>
-
-      {/* بطاقات الإحصائيات */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 p-6 shadow-lg transition hover:border-cyan-500/30 hover:shadow-cyan-500/5">
-          <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-cyan-500/60 to-transparent opacity-0 transition group-hover:opacity-100" />
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-zinc-400">
-                إجمالي العملاء
-              </p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-white">
-                {stats._count.toLocaleString("ar-EG")}
-              </p>
-            </div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/10 text-2xl text-cyan-400">
-              👥
-            </span>
+      <div id="section-overview" className="scroll-mt-32 space-y-6">
+        <div className="flex flex-col gap-2 border-b border-zinc-800/60 pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-500/90">
+              Mordesu Studio
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              لوحة التحكم
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-400">
+              مرحباً، {displayName}. تتبّع العملاء، الأرباح، والمراجعات من مكان
+              واحد.
+            </p>
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 p-6 shadow-lg transition hover:border-emerald-500/30 hover:shadow-emerald-500/5">
-          <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500/60 to-transparent opacity-0 transition group-hover:opacity-100" />
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-zinc-400">
-                إجمالي الأرباح
-              </p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-white">
-                {totalRevenue.toLocaleString("ar-EG")}
-              </p>
-              <p className="mt-0.5 text-xs text-zinc-500">جنيه مصري</p>
-            </div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl text-emerald-400">
-              💰
-            </span>
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 to-zinc-900/50 p-6 shadow-lg transition hover:border-amber-500/30 hover:shadow-amber-500/5 sm:col-span-2 lg:col-span-1">
-          <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-amber-500/60 to-transparent opacity-0 transition group-hover:opacity-100" />
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-zinc-400">
-                قيد المراجعة
-              </p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-white">
-                {pendingUsers.length.toLocaleString("ar-EG")}
-              </p>
-              <p className="mt-0.5 text-xs text-zinc-500">في انتظار موافقة الأدمن</p>
-            </div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-2xl text-amber-400">
-              ⏳
-            </span>
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            title="إجمالي العملاء"
+            value={stats._count.toLocaleString("ar-EG")}
+            accent="cyan"
+            icon={<Users className="h-6 w-6" strokeWidth={2} />}
+          />
+          <StatCard
+            title="إجمالي الأرباح"
+            value={totalRevenue.toLocaleString("ar-EG")}
+            subtitle="جنيه مصري"
+            accent="emerald"
+            icon={<Wallet className="h-6 w-6" strokeWidth={2} />}
+          />
+          <StatCard
+            title="قيد المراجعة"
+            value={pendingUsers.length.toLocaleString("ar-EG")}
+            subtitle="في انتظار موافقة الأدمن"
+            accent="amber"
+            icon={<Hourglass className="h-6 w-6" strokeWidth={2} />}
+            className="sm:col-span-2 lg:col-span-1"
+          />
         </div>
       </div>
 
-      {isAdmin && (
-        <>
-          {/* إضافة عميل جديد / إضافة مشاريع — أزرار تفتح النماذج */}
-          <AddSectionsCards />
-        </>
-      )}
+      <DashboardQuickNav items={quickNavItems} />
 
-      {/* قائمة أرباح منصة صناع */}
+      {isAdmin ? <AddSectionsCards /> : null}
+
       <CollapsibleSection
+        id="section-sanaa"
+        accent="amber"
         title="قائمة أرباح منصة صناع"
-        description={isAdmin ? "سجلات أرباح المشاهدات والتعاونات — يمكن التعديل أو الحذف" : "سجلات أرباح المشاهدات والتعاونات"}
-        icon="📺"
+        description={
+          isAdmin
+            ? "سجلات أرباح المشاهدات والتعاونات — يمكن التعديل أو الحذف"
+            : "سجلات أرباح المشاهدات والتعاونات"
+        }
+        icon={<Tv className="h-5 w-5" strokeWidth={2} />}
         badge={sanaaEntries.length}
         totalSum={sanaaSum.viewsAmount + sanaaSum.collaborationsAmount}
       >
         <SanaaEarningsTable entries={sanaaEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
-      {/* قائمة أرباح بيع الكورسات */}
       <CollapsibleSection
+        id="section-courses"
+        accent="violet"
         title="قائمة أرباح بيع الكورسات"
-        description={isAdmin ? "سجلات المنصات والأرباح — يمكن التعديل أو الحذف" : "سجلات المنصات والأرباح"}
-        icon="📚"
+        description={
+          isAdmin
+            ? "سجلات المنصات والأرباح — يمكن التعديل أو الحذف"
+            : "سجلات المنصات والأرباح"
+        }
+        icon={<BookOpen className="h-5 w-5" strokeWidth={2} />}
         badge={courseSalesEntries.length}
         totalSum={courseSalesSum}
       >
         <CourseSalesTable entries={courseSalesEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
-      {/* قائمة أرباح أخرى */}
       <CollapsibleSection
+        id="section-other"
+        accent="rose"
         title="قائمة أرباح أخرى"
-        description={isAdmin ? "سجلات سبب الربح والربح — يمكن التعديل أو الحذف" : "سجلات سبب الربح والربح"}
-        icon="💰"
+        description={
+          isAdmin
+            ? "سجلات سبب الربح والربح — يمكن التعديل أو الحذف"
+            : "سجلات سبب الربح والربح"
+        }
+        icon={<Coins className="h-5 w-5" strokeWidth={2} />}
         badge={otherProfitsEntries.length}
         totalSum={otherProfitsSum}
       >
         <OtherProfitsTable entries={otherProfitsEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
-      {/* قائمة تعاونات الاستوديو */}
       <CollapsibleSection
+        id="section-collabs"
+        accent="teal"
         title="قائمة تعاونات الاستوديو"
-        description={isAdmin ? "تعاونات الاستوديو — يمكن التعديل أو الحذف. الربح العائد ضمن إجمالي الأرباح." : "تعاونات الاستوديو — الربح العائد ضمن إجمالي الأرباح."}
-        icon="🤝"
+        description={
+          isAdmin
+            ? "تعاونات الاستوديو — يمكن التعديل أو الحذف. الربح العائد ضمن إجمالي الأرباح."
+            : "تعاونات الاستوديو — الربح العائد ضمن إجمالي الأرباح."
+        }
+        icon={<Handshake className="h-5 w-5" strokeWidth={2} />}
         badge={collaborationEntries.length}
         totalSum={collaborationsSum}
       >
         <CollaborationsTable entries={collaborationEntries} canEdit={isAdmin} />
       </CollapsibleSection>
 
-      {/* قائمة مشاريع الألعاب */}
       <CollapsibleSection
+        id="section-games"
+        accent="emerald"
         title="قائمة مشاريع الألعاب"
         description="المشاريع المضافة وأرباحها ونوعها (خاص / تابع لمستثمر)"
-        icon="🎮"
+        icon={<Gamepad2 className="h-5 w-5" strokeWidth={2} />}
         badge={gameProjects.length}
         totalSum={gameProjectsSum._sum.profits ?? 0}
       >
         {gameProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-12 text-center">
-              <span className="mb-2 text-3xl opacity-60">🎮</span>
-              <p className="text-sm font-medium text-zinc-400">
-                لا توجد مشاريع حتى الآن
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                أضف مشاريع من القسم أعلاه
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-zinc-800/80">
-              <table className="min-w-full text-right">
-                <thead>
-                  <tr className="border-b border-zinc-800 bg-zinc-800/50">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      اسم اللعبة
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      الأرباح
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      رابط المشروع
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      نوع المشروع
-                    </th>
+          <SectionEmptyState
+            icon={Gamepad2}
+            title="لا توجد مشاريع حتى الآن"
+            description='أضف مشاريع من قسم «إضافة بيانات» أعلاه'
+          />
+        ) : (
+          <DataTableShell>
+            <table className="min-w-full text-start">
+              <thead>
+                <tr className={tableHeadRow}>
+                  <th className={tableTh}>اسم اللعبة</th>
+                  <th className={tableTh}>الأرباح</th>
+                  <th className={tableTh}>رابط المشروع</th>
+                  <th className={tableTh}>نوع المشروع</th>
+                </tr>
+              </thead>
+              <tbody className={tableBody}>
+                {gameProjects.map((p) => (
+                  <tr key={p.id} className={tableRow}>
+                    <td className={tableTdStrong}>{p.name}</td>
+                    <td className={tableTdNums}>
+                      {p.profits.toLocaleString("ar-EG")}
+                    </td>
+                    <td className={tableTd}>
+                      {p.projectLink ? (
+                        <a
+                          href={p.projectLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-cyan-400 underline-offset-2 hover:text-cyan-300 hover:underline"
+                        >
+                          رابط
+                        </a>
+                      ) : (
+                        <span className="text-zinc-500">—</span>
+                      )}
+                    </td>
+                    <td className={`${tableTd} text-zinc-400`}>
+                      {p.projectType === "INVESTOR"
+                        ? "تابع لمستثمر"
+                        : "مشروع خاص"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-800/80">
-                  {gameProjects.map((p) => (
-                    <tr key={p.id} className="transition hover:bg-zinc-800/30">
-                      <td className="px-4 py-3 text-sm font-medium text-white">
-                        {p.name}
-                      </td>
-                      <td className="px-4 py-3 text-sm tabular-nums text-zinc-300">
-                        {p.profits.toLocaleString("ar-EG")}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {p.projectLink ? (
-                          <a
-                            href={p.projectLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-400 hover:underline"
-                          >
-                            رابط
-                          </a>
-                        ) : (
-                          <span className="text-zinc-500">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-zinc-400">
-                        {p.projectType === "INVESTOR" ? "تابع لمستثمر" : "مشروع خاص"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </DataTableShell>
+        )}
       </CollapsibleSection>
 
-      {/* إدارة العملاء */}
       <CollapsibleSection
+        id="section-clients"
+        accent="cyan"
         title="إدارة العملاء"
         description="قائمة منصات العملاء المسجّلين لدى الاستوديو"
-        icon="👥"
+        icon={<Users className="h-5 w-5" strokeWidth={2} />}
         badge={clients.length}
-        totalSum={(stats._sum.pricePaid ?? 0) + (stats._sum.featuresModificationsPrice ?? 0)}
+        totalSum={
+          (stats._sum.pricePaid ?? 0) +
+          (stats._sum.featuresModificationsPrice ?? 0)
+        }
       >
         {clients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-16 text-center">
-              <span className="mb-3 text-4xl opacity-60">📋</span>
-              <p className="text-sm font-medium text-zinc-400">
-                لا يوجد عملاء حتى الآن
-              </p>
-              <p className="mt-1 text-xs text-zinc-500">
-                ستظهر هنا بيانات العملاء بعد إضافتهم من لوحة التحكم
-              </p>
-            </div>
-          ) : (
-            <ClientsTable
-              clients={clientsForTable}
-              canEdit={isAdmin}
-              hidePhone={!isAdmin}
-            />
-          )}
+          <SectionEmptyState
+            icon={ClipboardList}
+            title="لا يوجد عملاء حتى الآن"
+            description="ستظهر هنا بيانات العملاء بعد إضافتهم من لوحة التحكم"
+          />
+        ) : (
+          <ClientsTable
+            clients={clientsForTable}
+            canEdit={isAdmin}
+            hidePhone={!isAdmin}
+          />
+        )}
       </CollapsibleSection>
 
-      {isAdmin && (
+      {isAdmin ? (
         <CollapsibleSection
+          id="section-users"
+          accent="slate"
           title="إدارة المستخدمين"
           description="عرض كل الحسابات — تعديل البيانات أو الرتبة أو حذف الحساب"
-          icon="👥"
+          icon={<UserCog className="h-5 w-5" strokeWidth={2} />}
           badge={allUsers.length}
         >
           <UsersManagementTable users={allUsers} currentUserId={user.id} />
         </CollapsibleSection>
-      )}
+      ) : null}
     </div>
   );
 }

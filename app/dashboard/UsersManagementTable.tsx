@@ -3,7 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { type Role } from "@prisma/client";
+import { Pencil, Trash2, UserCog, UserPlus } from "lucide-react";
 import EditUserModal from "./EditUserModal";
+import DataTableShell from "./ui/DataTableShell";
+import SectionEmptyState from "./ui/SectionEmptyState";
+import {
+  tableActionGroup,
+  tableBody,
+  tableBtnCyan,
+  tableBtnDelete,
+  tableBtnEdit,
+  tableHeadRow,
+  tableRow,
+  tableTd,
+  tableTh,
+} from "./ui/tableClasses";
 
 type User = {
   id: string;
@@ -18,7 +32,10 @@ type Props = {
   currentUserId: string;
 };
 
-export default function UsersManagementTable({ users, currentUserId }: Props) {
+export default function UsersManagementTable({
+  users,
+  currentUserId,
+}: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState<User | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -35,7 +52,8 @@ export default function UsersManagementTable({ users, currentUserId }: Props) {
       alert("لا يمكنك حذف حسابك أنت.");
       return;
     }
-    if (!confirm(`هل تريد حذف الحساب "${user.email}"؟ لا يمكن التراجع.`)) return;
+    if (!confirm(`هل تريد حذف الحساب "${user.email}"؟ لا يمكن التراجع.`))
+      return;
     setDeletingId(user.id);
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -83,76 +101,75 @@ export default function UsersManagementTable({ users, currentUserId }: Props) {
 
   if (users.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/20 py-12 text-center">
-        <p className="text-sm font-medium text-zinc-400">لا يوجد مستخدمون</p>
-      </div>
+      <SectionEmptyState
+        icon={UserCog}
+        title="لا يوجد مستخدمون"
+        description="ستظهر الحسابات هنا عند تسجيل مستخدمين جدد"
+      />
     );
   }
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-zinc-800/80">
-        <table className="min-w-full text-right">
+      <DataTableShell>
+        <table className="min-w-full text-start">
           <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-800/50">
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                البريد
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                الاسم
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                الرتبة
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                تاريخ التسجيل
-              </th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                إجراء
-              </th>
+            <tr className={tableHeadRow}>
+              <th className={tableTh}>البريد</th>
+              <th className={tableTh}>الاسم</th>
+              <th className={tableTh}>الرتبة</th>
+              <th className={tableTh}>تاريخ التسجيل</th>
+              <th className={tableTh}>إجراء</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800/80">
+          <tbody className={tableBody}>
             {users.map((u) => (
-              <tr key={u.id} className="transition hover:bg-zinc-800/30">
-                <td className="px-4 py-3 text-sm text-zinc-300" dir="ltr">
+              <tr key={u.id} className={tableRow}>
+                <td className={`${tableTd} text-zinc-300`} dir="ltr">
                   {u.email}
                 </td>
-                <td className="px-4 py-3 text-sm font-medium text-white">
+                <td className={`${tableTd} font-medium text-white`}>
                   {u.name || "—"}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-400">
+                <td className={`${tableTd} text-zinc-400`}>
                   {roleLabel[u.role]}
                 </td>
-                <td className="px-4 py-3 text-sm text-zinc-500">
+                <td className={`${tableTd} text-zinc-500`}>
                   {formatDate(u.createdAt)}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
+                <td className={tableTd}>
+                  <div className={tableActionGroup}>
                     <button
                       type="button"
                       onClick={() => setEditing(u)}
-                      className="rounded-xl bg-amber-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-500/90"
+                      className={tableBtnEdit}
                     >
+                      <Pencil aria-hidden />
                       تعديل
                     </button>
-                    {u.role !== "ADMIN" && (
+                    {u.role !== "ADMIN" ? (
                       <button
                         type="button"
                         onClick={() => handlePromote(u.id)}
                         disabled={promotingId === u.id}
-                        className="rounded-xl bg-cyan-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-cyan-500/90 disabled:opacity-50"
+                        className={tableBtnCyan}
                       >
+                        <UserPlus aria-hidden />
                         {promotingId === u.id ? "جاري..." : "ترقية إلى أدمن"}
                       </button>
-                    )}
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => handleDelete(u)}
                       disabled={u.id === currentUserId || deletingId === u.id}
-                      className="rounded-xl bg-red-600/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={u.id === currentUserId ? "لا يمكن حذف حسابك" : undefined}
+                      className={tableBtnDelete}
+                      title={
+                        u.id === currentUserId
+                          ? "لا يمكن حذف حسابك"
+                          : undefined
+                      }
                     >
+                      <Trash2 aria-hidden />
                       {deletingId === u.id ? "جاري الحذف..." : "حذف"}
                     </button>
                   </div>
@@ -161,13 +178,10 @@ export default function UsersManagementTable({ users, currentUserId }: Props) {
             ))}
           </tbody>
         </table>
-      </div>
-      {editing && (
-        <EditUserModal
-          user={editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      </DataTableShell>
+      {editing ? (
+        <EditUserModal user={editing} onClose={() => setEditing(null)} />
+      ) : null}
     </>
   );
 }

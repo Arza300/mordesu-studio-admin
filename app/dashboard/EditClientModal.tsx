@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import type { Prisma } from "@prisma/client";
+import ClientExtrasFields from "./ClientExtrasFields";
+import {
+  parseProjectAccountsFromDb,
+  parseSubscriptionsFromDb,
+  type ProjectAccountsState,
+  type SubscriptionsState,
+} from "@/app/lib/client-extras";
 
 type Client = {
   id: string;
@@ -11,6 +19,8 @@ type Client = {
   platformUrl: string;
   pricePaid: number;
   featuresModificationsPrice?: number | null;
+  projectAccounts?: Prisma.JsonValue | null;
+  subscriptions?: Prisma.JsonValue | null;
 };
 
 export default function EditClientModal({
@@ -23,6 +33,17 @@ export default function EditClientModal({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [projectAccounts, setProjectAccounts] = useState<ProjectAccountsState>(() =>
+    parseProjectAccountsFromDb(client.projectAccounts),
+  );
+  const [subscriptions, setSubscriptions] = useState<SubscriptionsState>(() =>
+    parseSubscriptionsFromDb(client.subscriptions),
+  );
+
+  useEffect(() => {
+    setProjectAccounts(parseProjectAccountsFromDb(client.projectAccounts));
+    setSubscriptions(parseSubscriptionsFromDb(client.subscriptions));
+  }, [client.id, client.projectAccounts, client.subscriptions]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -63,6 +84,8 @@ export default function EditClientModal({
           platformUrl,
           pricePaid: pricePaid ? parseInt(pricePaid, 10) || 0 : 0,
           featuresModificationsPrice: featuresModificationsPrice ? parseInt(featuresModificationsPrice, 10) || 0 : 0,
+          projectAccounts,
+          subscriptions,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -91,7 +114,7 @@ export default function EditClientModal({
         className="absolute inset-0"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-lg rounded-2xl border border-zinc-700 bg-zinc-900 shadow-xl">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 shadow-xl">
         <div className="border-b border-zinc-800 px-6 py-4">
           <h2 id="edit-client-title" className="text-lg font-semibold text-white">
             تعديل بيانات العميل
@@ -179,6 +202,13 @@ export default function EditClientModal({
               />
             </div>
           </div>
+
+          <ClientExtrasFields
+            projectAccounts={projectAccounts}
+            setProjectAccounts={setProjectAccounts}
+            subscriptions={subscriptions}
+            setSubscriptions={setSubscriptions}
+          />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
 
